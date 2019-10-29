@@ -2,37 +2,37 @@ language: java
 if: tag IS present OR NOT (branch == master)
 jdk:
   - openjdk8
-jobs:
-  include:
-  - stage: fetch dependencies
-    script: mvn -q dependency:copy-dependencies
-  - stage: test
-    script: mvn test
-  - stage: build
-    before_script:
-      - |
-        if [ "$TRAVIS_BRANCH" = "master" ] || [ "${TRAVIS_TAG}X" != "X" ]; then
-          git fetch --unshallow
-          mvn -q versions:set@remove-snapshot versions:commit@remove-snapshot -B;
-        fi
-    script:
-      - |
-        mvn clean package -B
-        if [ "$TRAVIS_BRANCH" = "master" ] || [ "${TRAVIS_TAG}X" != "X" ]; then
-          ## Only run these commands when building a release
-          mvn sonar:sonar -Dsonar.login=${SONAR_PROJECT_TOKEN} -B
-          # mvn -q dependency-check:check -B
-        fi
-  - stage: deploy
-    before_deploy:
-      - export PLUGIN_JAR=$(ls target/sonar-auth-openshift-plugin*jar)
-      - echo "deploying $PLUGIN_JAR to GitHub releases"
-    deploy:
-      provider: releases
-      api_key: "${GITHUB_OAUTH_TOKEN}"
-      file_glob: true
-      file:
-        - "${PLUGIN_JAR}"
+before_script:
+  - |
+    if [ "$TRAVIS_BRANCH" = "master" ] || [ "${TRAVIS_TAG}X" != "X" ]; then
+      git fetch --unshallow
+      mvn -q versions:set@remove-snapshot versions:commit@remove-snapshot -B;
+    fi
+script:
+  - |
+    # Fetch dependencies
+    mvn -q dependency:copy-dependencies
+
+    # Unit test
+    mvn test
+
+    # Generate build artifact, already tested
+    mvn clean package -B -Dmaven.test.skip=true
+
+    if [ "$TRAVIS_BRANCH" = "master" ] || [ "${TRAVIS_TAG}X" != "X" ]; then
+      ## Only run these commands when building a release
+      mvn sonar:sonar -Dsonar.login=${SONAR_PROJECT_TOKEN} -B
+      # mvn -q dependency-check:check -B
+    fi
+before_deploy:
+  - export PLUGIN_JAR=$(ls target/sonar-auth-openshift-plugin*jar)
+  - echo "deploying $PLUGIN_JAR to GitHub releases"
+deploy:
+  provider: releases
+  api_key: "${GITHUB_OAUTH_TOKEN}"
+  file_glob: true
+  file:
+    - "${PLUGIN_JAR}"
     #    - "target/site/jacoco/*"
     #    - "target/dependency-check-report.html"
 skip_cleanup: true
