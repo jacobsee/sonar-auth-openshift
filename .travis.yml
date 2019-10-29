@@ -2,6 +2,9 @@ language: java
 if: tag IS present OR NOT (branch == master)
 jdk:
   - openjdk8
+cache:
+  directories:
+  - "$HOME/.m2"
 before_script:
   - |
     if [ "$TRAVIS_BRANCH" = "master" ] || [ "${TRAVIS_TAG}X" != "X" ]; then
@@ -10,20 +13,13 @@ before_script:
     fi
 script:
   - |
-    # Fetch dependencies
-    mvn -q dependency:copy-dependencies
+    ./mvnw clean package
 
-    # Unit test
-    mvn test
-
-    # Generate build artifact, already tested
-    mvn clean package -B -Dmaven.test.skip=true
-
-    if [ "$TRAVIS_BRANCH" = "master" ] || [ "${TRAVIS_TAG}X" != "X" ]; then
+    # if [ "$TRAVIS_BRANCH" = "master" ] || [ "${TRAVIS_TAG}X" != "X" ]; then
       ## Only run these commands when building a release
-      mvn sonar:sonar -Dsonar.login=${SONAR_PROJECT_TOKEN} -B
+      # mvn sonar:sonar -Dsonar.login=${SONAR_PROJECT_TOKEN} -B
       # mvn -q dependency-check:check -B
-    fi
+    # fi
 before_deploy:
   - export PLUGIN_JAR=$(ls target/sonar-auth-openshift-plugin*jar)
   - echo "deploying $PLUGIN_JAR to GitHub releases"
@@ -35,6 +31,6 @@ deploy:
     - "${PLUGIN_JAR}"
     #    - "target/site/jacoco/*"
     #    - "target/dependency-check-report.html"
-skip_cleanup: true
-on:
-  tags: true
+  skip_cleanup: true
+  on:
+    tags: true
